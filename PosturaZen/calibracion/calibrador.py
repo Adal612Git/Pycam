@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import time
 from dataclasses import dataclass
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple, List, Any
 
 import cv2
 from ultralytics import YOLO
@@ -22,8 +22,39 @@ class PosturaBase:
     center_x: float
 
     @classmethod
-    def from_dict(cls, data: Dict[str, float]) -> "PosturaBase":
-        return cls(**data)
+    def from_dict(cls, data: Dict[str, Any]) -> "PosturaBase":
+        """Crea una instancia desde un diccionario flexible.
+
+        Se aceptan variantes como ``"referencia"`` o ``"angulos"`` dentro de
+        ``data`` y claves en castellano para mantener compatibilidad con
+        versiones antiguas del archivo JSON.
+        """
+
+        # Permitir que la información venga anidada bajo "referencia"
+        if "referencia" in data and isinstance(data["referencia"], dict):
+            data = data["referencia"]
+
+        # Extraer posibles subestructuras "angulos"
+        if "angulos" in data and isinstance(data["angulos"], dict):
+            data = {**data, **data["angulos"]}
+
+        # Mapear claves posibles a las tres esperadas
+        mapping = {
+            "neck_back_angle": ["neck_back_angle", "angulo_cuello", "cuello_espalda"],
+            "shoulder_hip_angle": ["shoulder_hip_angle", "angulo_cadera"],
+            "center_x": ["center_x", "centro_x"],
+        }
+
+        parsed: Dict[str, float] = {}
+        for key, aliases in mapping.items():
+            for alias in aliases:
+                if alias in data:
+                    parsed[key] = float(data[alias])
+                    break
+            else:
+                raise ValueError(f"Clave '{key}' no encontrada en calibraci\u00f3n")
+
+        return cls(**parsed)
 
 
 KEYPOINT_INDEX = {
