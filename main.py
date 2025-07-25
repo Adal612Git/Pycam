@@ -11,8 +11,8 @@ def main() -> None:
     face_mesh = mp.solutions.face_mesh.FaceMesh(static_image_mode=False, max_num_faces=1)
     estimator = HRVEstimator(fps=30)
     frame_count = 0
-    bpm = 0.0
-    hrv = 0.0
+    bpm = None
+    hrv = None
 
     while True:
         ret, frame = cap.read()
@@ -31,10 +31,12 @@ def main() -> None:
             bpm = data["bpm"]
             hrv = data["hrv"]
 
-        text = "HRV no disponible"
-        if hrv > 0:
+        text = "BPM: N/D"
+        if bpm is not None and hrv is not None:
             estado = "estresado" if hrv < 25 else "relajado"
             text = f"BPM: {bpm:.1f} | HRV: {hrv:.1f} ms ({estado})"
+        elif bpm is not None:
+            text = f"BPM: {bpm:.1f}"
         cv2.putText(frame, text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
         cv2.imshow("HRV", frame)
 
