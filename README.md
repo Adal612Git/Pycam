@@ -14,8 +14,10 @@ Este repositorio busca servir como base para aplicaciones de análisis visual, d
 ## Uso
 
 ```bash
-python main.py
-Este comando ejecuta el script principal que inicia la cámara y aplica los filtros definidos.
+python -m PosturaZen.main
+```
+Este comando debe ejecutarse desde la raíz del repositorio y pone en marcha el
+sistema de detección y corrección de postura.
 
 Autor
 Ricardo A. Romero – @Adal612Git
