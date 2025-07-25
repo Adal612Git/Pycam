@@ -1,5 +1,6 @@
 import type { Pose, Results } from '@mediapipe/pose';
-import { neckBackAngle, shoulderHipAngle, Point3D } from './angles';
+import { neckBackAngle, shoulderHipAngle } from './angles';
+import type { Point3D } from './angles';
 import type { CalibrationData } from './calibrate';
 import { ToleranceWindow } from './tolerance';
 import { detectBalance } from './balance';
