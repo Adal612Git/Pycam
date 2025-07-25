@@ -10,7 +10,7 @@ from typing import Dict, Tuple, List
 import cv2
 from ultralytics import YOLO
 
-from ..utils.angulos import calcular_angulo
+from PosturaZen.utils.angulos import calcular_angulo
 
 
 @dataclass

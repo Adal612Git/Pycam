@@ -2,8 +2,8 @@
 
 import os
 
-from calibracion.calibrador import Calibrador, PosturaBase
-from deteccion.detector import Detector, cargar_postura
+from PosturaZen.calibracion.calibrador import Calibrador, PosturaBase
+from PosturaZen.deteccion.detector import Detector, cargar_postura
 
 BASE_PATH = os.path.join(os.path.dirname(__file__), "postura_base.json")
 
