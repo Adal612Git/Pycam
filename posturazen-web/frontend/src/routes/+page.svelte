@@ -165,6 +165,17 @@
         {/if}
       {/if}
     </aside>
+    <div id="explicacion-panel" class="info-box">
+      <h3>¿Qué significan estos valores?</h3>
+      <ul>
+        <li><strong>HRV (Variabilidad Cardiaca):</strong> Una medida de tu equilibrio interno. Si es menor a 25 ms, podrías estar estresado. Si es mayor, estás relajado.</li>
+        <li><strong>BPM:</strong> Tus latidos por minuto. Normalmente entre 60–90 en reposo.</li>
+        <li><strong>Ángulo cuello-espalda:</strong> Muestra si estás encorvado. Un ángulo bajo indica mala postura.</li>
+        <li><strong>Postura:</strong> Verde = Correcta, Amarillo = Dudosa, Rojo = Incorrecta.</li>
+        <li><strong>Movimiento:</strong> Si te mueves bruscamente, el sistema lo detecta y te avisa.</li>
+        <li><strong>Distancia:</strong> Qué tan lejos estás de la cámara. Muy cerca o muy lejos afecta la precisión.</li>
+      </ul>
+    </div>
   </div>
 </div>
 
@@ -188,6 +199,8 @@
   .main {
     display: flex;
     gap: 1rem;
+    flex-wrap: wrap;
+    align-items: flex-start;
   }
 
   .video-box {
@@ -210,6 +223,16 @@
   }
 
   .panel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    min-width: 220px;
+    padding: 1rem;
+    background: #2c2c2c;
+    border-radius: 8px;
+  }
+
+  .info-box {
     display: flex;
     flex-direction: column;
     gap: 0.4rem;
