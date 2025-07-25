@@ -41,6 +41,8 @@ class Detector:
         self.buenos_frames = 0
         self._mov_hist: Deque[tuple] = deque(maxlen=10)
         self._frames_estables = 0
+        self.alerta_voz_activa = False
+        self._frames_buena_postura = 0
 
     def _obtener_puntos(self, frame) -> Dict[str, tuple]:
         resultados = self.model(frame, verbose=False)[0]
@@ -127,8 +129,22 @@ class Detector:
             for (x, y, w, h) in faces[:1]:
                 roi = frame[y : y + h, x : x + w]
                 hrv_val = self.hrv.update(roi)
-            estado = "\u2705" if not mala_postura else "\u26a0\ufe0f"
-            mensaje = f"Postura: {estado} | Alertas: {self.alertas}"
+            estado = "verde" if not mala_postura else "rojo"
+            icono = "\u2705" if estado == "verde" else "\u26a0\ufe0f"
+            mensaje = f"Postura: {icono} | Alertas: {self.alertas}"
+            if estado == "rojo":
+                self._frames_buena_postura = 0
+                if not self.alerta_voz_activa:
+                    feedback.speak(
+                        "Tu postura no es correcta. Ender\u00e9zate, por favor."
+                    )
+                    self.alerta_voz_activa = True
+            else:
+                if self.alerta_voz_activa:
+                    self._frames_buena_postura += 1
+                    if self._frames_buena_postura >= self.fps * 3:
+                        self.alerta_voz_activa = False
+                        self._frames_buena_postura = 0
             if hrv_val is not None:
                 mensaje += f" | HRV: {hrv_val:.2f}"
             print(mensaje)
