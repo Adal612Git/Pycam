@@ -118,6 +118,39 @@ class Detector:
 
 
 def cargar_postura(path: str = "PosturaZen/postura_base.json") -> PosturaBase:
-    with open(path, "r", encoding="utf-8") as f:
-        data = json.load(f)
-    return PosturaBase.from_dict(data)
+    """Carga la configuración de calibración de forma segura.
+
+    Si el archivo no existe o está corrupto, se genera uno básico para
+    evitar fallos y se sugiere realizar la calibración nuevamente.
+    """
+
+    def _generar_por_defecto() -> PosturaBase:
+        postura = PosturaBase(0.0, 0.0, 0.0)
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(postura.__dict__, f, indent=4)
+        except OSError as exc:
+            print(f"No se pudo escribir el archivo de calibración: {exc}")
+        return postura
+
+    if not os.path.exists(path) or os.path.getsize(path) == 0:
+        print("Archivo de calibración no encontrado. Generando uno de prueba.")
+        return _generar_por_defecto()
+
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except json.JSONDecodeError:
+        print("Error al leer la calibración. Generando una de prueba.")
+        return _generar_por_defecto()
+
+    try:
+        postura = PosturaBase.from_dict(data)
+    except (KeyError, ValueError, TypeError) as exc:
+        print(
+            "Estructura de calibración inválida. Considere recalibrar."
+        )
+        return _generar_por_defecto()
+
+    print("Calibración cargada correctamente.")
+    return postura
