@@ -6,6 +6,7 @@
   import { onMount } from 'svelte';
   import { neckBackAngle, shoulderHipAngle } from '$lib/pose/angles';
   import { HRVEstimator } from '$lib/pose/hrv';
+  import { speak } from '$lib/voice';
 
   let pose: any;
   let videoElement: HTMLVideoElement;
@@ -34,13 +35,17 @@
 
   let badStart: number | null = null;
   let showWarning = false;
+  let lastNose: {x: number, y: number} | null = null;
+  let stableFrames = 0;
+  let movementAlertActive = false;
+  let warningVoiceActive = false;
 
   onMount(async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ video: true });
     videoElement.srcObject = stream;
     await videoElement.play();
 
-    const posePkg = await import('@mediapipe/pose');
+    const posePkg = await import('https://cdn.jsdelivr.net/npm/@mediapipe/pose');
     const { Pose } = posePkg;
 
     pose = new Pose({ locateFile: (f: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}` });
@@ -94,6 +99,25 @@
     const ear = (lms[7]?.visibility ?? 1) > 0.7 ? lms[7] : lms[8];
     const neck = { x: ear.x, y: ear.y, z: ear.z };
 
+    const nose = lms[0];
+    if (lastNose) {
+      const dist = Math.hypot(nose.x - lastNose.x, nose.y - lastNose.y);
+      const stable = dist < 0.02;
+      if (stable) {
+        stableFrames++;
+        if (movementAlertActive && stableFrames > 60) {
+          movementAlertActive = false;
+        }
+      } else {
+        stableFrames = 0;
+        if (!movementAlertActive) {
+          speak('Detecté movimiento. Recuerda mantener tu postura alineada.');
+          movementAlertActive = true;
+        }
+      }
+    }
+    lastNose = { x: nose.x, y: nose.y };
+
     neckAngle = +(neckBackAngle([shoulderMid, neck, hipMid]) * (180 / Math.PI)).toFixed(1);
     hipAngle = +(shoulderHipAngle(lms[11], lms[12], lms[23], lms[24]) * (180 / Math.PI)).toFixed(1);
 
@@ -121,10 +145,15 @@
         posture = '⚠️ Incorrecta';
         if (badStart === null) badStart = Date.now();
         showWarning = Date.now() - (badStart ?? 0) >= 3000;
+        if (showWarning && !warningVoiceActive) {
+          speak('Tu postura no es correcta. Enderézate, por favor.');
+          warningVoiceActive = true;
+        }
       } else {
         posture = 'Correcta';
         badStart = null;
         showWarning = false;
+        warningVoiceActive = false;
       }
 
       drawCanvas(incorrect);
