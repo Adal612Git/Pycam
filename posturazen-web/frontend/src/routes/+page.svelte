@@ -5,6 +5,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { neckBackAngle, shoulderHipAngle } from '$lib/pose/angles';
+  import { HRVEstimator } from '$lib/pose/hrv';
 
   let pose: any;
   let videoElement: HTMLVideoElement;
@@ -27,6 +28,10 @@
   let visibility = 0;
   let posture = '';
 
+  let bpm = 0;
+  let hrvValue = 0;
+  let hrvEstimator: HRVEstimator;
+
   let badStart: number | null = null;
   let showWarning = false;
 
@@ -41,6 +46,8 @@
     pose = new Pose({ locateFile: (f: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}` });
     pose.setOptions({ modelComplexity: 1, smoothLandmarks: true });
     pose.onResults(handleResults);
+
+    hrvEstimator = new HRVEstimator(30);
 
     canvasCtx = canvasElement.getContext('2d') as CanvasRenderingContext2D;
 
@@ -90,12 +97,22 @@
     neckAngle = +(neckBackAngle([shoulderMid, neck, hipMid]) * (180 / Math.PI)).toFixed(1);
     hipAngle = +(shoulderHipAngle(lms[11], lms[12], lms[23], lms[24]) * (180 / Math.PI)).toFixed(1);
 
+    hrvEstimator.update(videoElement, lms);
+
     if (calibrating) {
       totalNeck += neckAngle;
       totalHip += hipAngle;
       totalCount++;
     } else {
       frames++;
+      if (frames % 30 === 0) {
+        const data = hrvEstimator.compute();
+        bpm = data.bpm;
+        hrvValue = data.hrv;
+        if (hrvValue && hrvValue < 25) {
+          alert('¡Alerta de estrés fisiológico!');
+        }
+      }
       const diff1 = Math.abs(neckAngle - baselineNeck);
       const diff2 = Math.abs(hipAngle - baselineHip);
       const incorrect = diff1 > 10 || diff2 > 10;
@@ -141,6 +158,8 @@
         <p>Ángulo hombros-cadera: {hipAngle}°</p>
         <p>Visibilidad promedio: {visibility}%</p>
         <p>Estado: {posture}</p>
+        <p>Frecuencia cardiaca (BPM): {bpm ? bpm.toFixed(1) : 'N/A'}</p>
+        <p>HRV estimado: {hrvValue ? hrvValue.toFixed(1) + ' ms' : 'N/A'}</p>
         {#if showWarning}
           <p class="alert">⚠️ Ajusta tu postura para evitar fatiga</p>
         {/if}
