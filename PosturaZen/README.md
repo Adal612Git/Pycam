@@ -15,7 +15,8 @@ pip install -r requirements.txt
 
 ## Uso
 ```bash
-python main.py
+python -m PosturaZen.main
 ```
-El sistema se calibrar\u00e1 por 10 segundos y luego comenzar\u00e1 la detecci\u00f3n
-y el c\u00e1lculo de HRV.
+Ejecuta el m\u00f3dulo principal desde la ra\u00edz del proyecto. El sistema se
+calibrar\u00e1 por 10 segundos y luego comenzar\u00e1 la detecci\u00f3n y el c\u00e1lculo de
+HRV.
