@@ -1,4 +1,4 @@
-"""Modulo de calibracion inicial del sistema PosturaZen."""
+"""Modulo de calibracion inicial del sistema PosturaZen usando YOLOv8."""
 
 from __future__ import annotations
 
@@ -8,12 +8,9 @@ from dataclasses import dataclass
 from typing import Dict, Tuple, List
 
 import cv2
-import mediapipe as mp
+from ultralytics import YOLO
 
 from ..utils.angulos import calcular_angulo
-
-
-mp_pose = mp.solutions.pose
 
 
 @dataclass
@@ -29,12 +26,12 @@ class PosturaBase:
         return cls(**data)
 
 
-LANDMARKS = {
-    "left_shoulder": mp_pose.PoseLandmark.LEFT_SHOULDER,
-    "right_shoulder": mp_pose.PoseLandmark.RIGHT_SHOULDER,
-    "left_hip": mp_pose.PoseLandmark.LEFT_HIP,
-    "right_hip": mp_pose.PoseLandmark.RIGHT_HIP,
-    "nose": mp_pose.PoseLandmark.NOSE,
+KEYPOINT_INDEX = {
+    "left_shoulder": 5,
+    "right_shoulder": 6,
+    "left_hip": 11,
+    "right_hip": 12,
+    "nose": 0,
 }
 
 
@@ -44,18 +41,19 @@ class Calibrador:
     def __init__(self, segundos: int = 10, fps: int = 30) -> None:
         self.segundos = segundos
         self.fps = fps
+        self.model = YOLO("yolov8n-pose.pt")
 
-    def _obtener_puntos(self, resultados) -> Dict[str, Tuple[float, float, float]]:
-        puntos = {}
-        for nombre, idx in LANDMARKS.items():
-            landmark = resultados.pose_landmarks.landmark[idx]
-            puntos[nombre] = (landmark.x, landmark.y, landmark.visibility)
+    def _obtener_puntos(self, frame) -> Dict[str, Tuple[float, float]]:
+        resultados = self.model(frame, verbose=False)[0]
+        if resultados.keypoints is None or len(resultados.keypoints) == 0:
+            return {}
+        kp = resultados.keypoints.xyn[0]
+        puntos = {n: (float(kp[idx][0]), float(kp[idx][1])) for n, idx in KEYPOINT_INDEX.items()}
         return puntos
 
     def calibrar(self) -> PosturaBase:
-        print("Siéntate bien por 10 segundos para calibrar")
+        print("Si\u00e9ntate bien por 10 segundos para calibrar")
         cap = cv2.VideoCapture(0)
-        pose = mp_pose.Pose()
 
         start_time = time.time()
         buenos_frames: List[float] = []
@@ -67,12 +65,8 @@ class Calibrador:
             ret, frame = cap.read()
             if not ret:
                 continue
-            image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            resultados = pose.process(image_rgb)
-            if not resultados.pose_landmarks:
-                continue
-            puntos = self._obtener_puntos(resultados)
-            if all(puntos[n][2] > 0.7 for n in puntos):
+            puntos = self._obtener_puntos(frame)
+            if len(puntos) == len(KEYPOINT_INDEX):
                 shoulder_mid = (
                     (puntos["left_shoulder"][0] + puntos["right_shoulder"][0]) / 2,
                     (puntos["left_shoulder"][1] + puntos["right_shoulder"][1]) / 2,
@@ -94,10 +88,9 @@ class Calibrador:
                 break
 
         cap.release()
-        pose.close()
 
         if len(buenos_frames) < self.segundos * self.fps * 0.5:
-            print("No se detectó suficiente visibilidad. Reiniciando calibración...")
+            print("No se detect\u00f3 suficiente visibilidad. Reiniciando calibraci\u00f3n...")
             return self.calibrar()
 
         promedio = PosturaBase(
@@ -108,5 +101,3 @@ class Calibrador:
         with open("PosturaZen/postura_base.json", "w", encoding="utf-8") as f:
             json.dump(promedio.__dict__, f, indent=4)
         return promedio
-
-
