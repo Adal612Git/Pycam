@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import time
 import hashlib
 import os
 from collections import deque
@@ -14,7 +13,8 @@ from ultralytics import YOLO
 
 from PosturaZen.utils.angulos import calcular_angulo
 from PosturaZen.utils.hrv import HRVEstimator
-from PosturaZen.voz.feedback import decir
+import PosturaZen.voz.feedback as feedback
+from modules.posture_analysis import is_posture_stable
 from PosturaZen.calibracion.calibrador import PosturaBase
 
 
@@ -39,6 +39,8 @@ class Detector:
         self.hrv = HRVEstimator(fps)
         self.alertas = 0
         self.buenos_frames = 0
+        self._mov_hist: Deque[tuple] = deque(maxlen=10)
+        self._frames_estables = 0
 
     def _obtener_puntos(self, frame) -> Dict[str, tuple]:
         resultados = self.model(frame, verbose=False)[0]
@@ -75,6 +77,26 @@ class Detector:
             )
             nose = (puntos["nose"][0], puntos["nose"][1])
 
+            # Control de movimiento y aviso por voz
+            marco_actual = [(0.0, 0.0)] * 11
+            marco_actual[10] = nose
+            estable = is_posture_stable(self._mov_hist, marco_actual, threshold=0.02)
+            self._mov_hist.append(marco_actual)
+            if not estable:
+                self._frames_estables = 0
+                if not feedback.alerta_movimiento_activa:
+                    feedback.speak(
+                        "Detecté movimiento. Recuerda mantener tu postura alineada."
+                    )
+                    feedback.alerta_movimiento_activa = True
+            else:
+                self._frames_estables += 1
+                if (
+                    feedback.alerta_movimiento_activa
+                    and self._frames_estables >= self.fps * 2
+                ):
+                    feedback.alerta_movimiento_activa = False
+
             angulo_cuello = calcular_angulo(nose, shoulder_mid, hip_mid)
             angulo_cadera = calcular_angulo(shoulder_mid, hip_mid, (hip_mid[0], hip_mid[1] + 0.1))
             centro_x = hip_mid[0]
@@ -92,12 +114,12 @@ class Detector:
 
             if len(self.window) == self.window.maxlen and all(self.window):
                 self.alertas += 1
-                decir("Cuidado con tu postura", self.no_molestar)
+                feedback.decir("Cuidado con tu postura", self.no_molestar)
                 print("\u26a0\ufe0f Postura incorrecta")
 
             if self.buenos_frames >= self.fps * 60 * 10:
                 self.buenos_frames = 0
-                decir("Excelente postura, sigue asi", self.no_molestar)
+                feedback.decir("Excelente postura, sigue asi", self.no_molestar)
 
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             faces = face_cascade.detectMultiScale(gray, 1.3, 5)
