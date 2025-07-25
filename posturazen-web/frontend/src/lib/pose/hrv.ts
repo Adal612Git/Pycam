@@ -19,6 +19,7 @@ export class HRVEstimator {
     const cy = Math.round(lm.y * h);
     const size = 10;
     const off = HRVEstimator.offscreen;
+    if (!off) return;
     off.width = w;
     off.height = h;
     const ctx = off.getContext('2d');
@@ -65,5 +66,8 @@ export class HRVEstimator {
     return { bpm, hrv: rmssd };
   }
 
-  private static offscreen: HTMLCanvasElement = document.createElement('canvas');
+  private static offscreen: HTMLCanvasElement | null =
+    typeof window !== 'undefined' && typeof document !== 'undefined'
+      ? document.createElement('canvas')
+      : null;
 }
