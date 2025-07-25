@@ -1,20 +1,14 @@
 # PosturaZen
 
-Sistema de detección de postura utilizando MediaPipe y OpenCV.
+Sistema de correcci\u00f3n de postura compatible con **Python 3.13**.
+Se basa en `ultralytics` (YOLOv8 pose) y `opencv-python` para
+la detecci\u00f3n esquel\u00e9tica. No requiere `mediapipe`.
 
 ## Requisitos
-- Python 3.10 a 3.12
+- Python 3.13+
 - Webcam disponible
 
-> **Nota sobre Python 3.13**
->
-> Actualmente `mediapipe`, la dependencia principal del proyecto, no
-> distribuye ruedas para Python 3.13. Para evitar errores al instalar los
-> requisitos, se recomienda utilizar Python 3.10, 3.11 o 3.12. Cuando el
-> paquete proporcione soporte oficial para Python 3.13 se actualizará la
-> compatibilidad de PosturaZen.
-
-## Instalación
+## Instalaci\u00f3n
 ```bash
 pip install -r requirements.txt
 ```
@@ -23,5 +17,5 @@ pip install -r requirements.txt
 ```bash
 python main.py
 ```
-El sistema se calibrará por 10 segundos y luego comenzará la detección.
-
+El sistema se calibrar\u00e1 por 10 segundos y luego comenzar\u00e1 la detecci\u00f3n
+y el c\u00e1lculo de HRV.
