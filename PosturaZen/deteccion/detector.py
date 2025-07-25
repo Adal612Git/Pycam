@@ -11,10 +11,10 @@ from typing import Deque, Dict
 import cv2
 from ultralytics import YOLO
 
-from ..utils.angulos import calcular_angulo
-from ..utils.hrv import HRVEstimator
-from ..voz.feedback import decir
-from ..calibracion.calibrador import PosturaBase
+from PosturaZen.utils.angulos import calcular_angulo
+from PosturaZen.utils.hrv import HRVEstimator
+from PosturaZen.voz.feedback import decir
+from PosturaZen.calibracion.calibrador import PosturaBase
 
 
 KEYPOINT_INDEX = {
