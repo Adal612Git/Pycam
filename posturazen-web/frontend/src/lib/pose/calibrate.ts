@@ -1,5 +1,6 @@
 import type { Pose, Results } from '@mediapipe/pose';
-import { neckBackAngle, shoulderHipAngle, Point3D } from './angles';
+import { neckBackAngle, shoulderHipAngle } from './angles';
+import type { Point3D } from './angles';
 
 export interface CalibrationData {
     neckBack: number;
@@ -40,7 +41,7 @@ export async function calibrate(pose: Pose, video: HTMLVideoElement): Promise<Ca
             neckAngles.push(neckAngle);
             hipAngles.push(hipAngle);
             if (performance.now() - start >= 10000) {
-                pose.removeListener('results', onResults);
+                (pose as any).offResults(onResults);
                 resolve({
                     neckBack: neckAngles.reduce((a, b) => a + b, 0) / neckAngles.length,
                     shoulderHip: hipAngles.reduce((a, b) => a + b, 0) / hipAngles.length

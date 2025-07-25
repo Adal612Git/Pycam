@@ -21,6 +21,7 @@
 		"vite": "^7.0.4"
 	},
 	"dependencies": {
+                "@mediapipe/camera_utils": "^0.5.1675469404",
 		"@mediapipe/pose": "^0.5.1675469404"
 	}
 }
