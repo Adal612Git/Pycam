@@ -28,8 +28,8 @@
   let visibility = 0;
   let posture = '';
 
-  let bpm = 0;
-  let hrvValue = 0;
+  let bpm: number | null = null;
+  let hrvValue: number | null = null;
   let hrvEstimator: HRVEstimator;
 
   let badStart: number | null = null;
@@ -158,8 +158,8 @@
         <p>Ángulo hombros-cadera: {hipAngle}°</p>
         <p>Visibilidad promedio: {visibility}%</p>
         <p>Estado: {posture}</p>
-        <p>Frecuencia cardiaca (BPM): {bpm ? bpm.toFixed(1) : 'N/A'}</p>
-        <p>HRV estimado: {hrvValue ? hrvValue.toFixed(1) + ' ms' : 'N/A'}</p>
+        <p>Frecuencia cardiaca (BPM): {bpm === null ? 'N/D' : bpm.toFixed(1)}</p>
+        <p>HRV estimado: {hrvValue === null ? 'N/D' : hrvValue.toFixed(1) + ' ms'}</p>
         {#if showWarning}
           <p class="alert">⚠️ Ajusta tu postura para evitar fatiga</p>
         {/if}

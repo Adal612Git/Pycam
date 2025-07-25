@@ -49,24 +49,35 @@ class HRVEstimator:
         mean_val = float(np.mean(green))
         self.signal.append(mean_val)
 
-    def compute(self) -> Dict[str, float]:
+    def compute(self) -> Dict[str, float | None]:
         """Compute BPM and HRV from the stored signal."""
         if len(self.signal) < self.fps * 2:
-            return {"bpm": 0.0, "hrv": 0.0}
+            return {"bpm": None, "hrv": None}
 
         sig = np.array(self.signal, dtype=np.float32)
         sig = sig - np.mean(sig)
         fs = self.fps
-        b, a = butter(2, [0.7 / (fs / 2), 4 / (fs / 2)], btype="band")
+        b, a = butter(2, [0.7 / (fs / 2), 3.5 / (fs / 2)], btype="band")
         filtered = filtfilt(b, a, sig)
 
+        # Use FFT to obtain the dominant frequency within the valid band
+        freqs = np.fft.rfftfreq(len(filtered), d=1.0 / fs)
+        fft = np.abs(np.fft.rfft(filtered))
+        idx = np.where((freqs >= 0.7) & (freqs <= 3.5))[0]
+        if idx.size == 0:
+            return {"bpm": None, "hrv": None}
+        peak = idx[np.argmax(fft[idx])]
+        bpm = float(freqs[peak] * 60.0)
+
+        # Estimate HRV using RR intervals detected on the filtered signal
         peaks, _ = find_peaks(filtered, distance=int(fs * 0.25))
-        if len(peaks) < 2:
-            return {"bpm": 0.0, "hrv": 0.0}
+        if len(peaks) < 3:
+            return {"bpm": bpm, "hrv": None}
 
         rr = np.diff(peaks) / fs
-        bpm = 60.0 / np.mean(rr)
+        if rr.size < 2:
+            return {"bpm": bpm, "hrv": None}
         diff_rr = np.diff(rr)
         rmssd = np.sqrt(np.mean(diff_rr ** 2)) * 1000.0  # ms
-        return {"bpm": float(bpm), "hrv": float(rmssd)}
+        return {"bpm": bpm, "hrv": float(rmssd)}
 
