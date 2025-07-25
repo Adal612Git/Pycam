@@ -13,11 +13,16 @@ Este repositorio busca servir como base para aplicaciones de análisis visual, d
 
 ## Uso
 
+Instala las dependencias de la interfaz web e inicia todo con un solo comando:
+
 ```bash
-python -m PosturaZen.main
+npm install
+npm run dev
 ```
-Este comando debe ejecutarse desde la raíz del repositorio y pone en marcha el
-sistema de detección y corrección de postura.
+
+Esto iniciará el servidor de desarrollo de la versión web. Desde el navegador
+se realizan la detección de postura, el seguimiento de movimiento y las
+alertas por voz en español.
 
 Autor
 Ricardo A. Romero – @Adal612Git

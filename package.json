@@ -1,0 +1,7 @@
+{
+  "name": "posturazen-root",
+  "private": true,
+  "scripts": {
+    "dev": "npm run dev --prefix posturazen-web/frontend"
+  }
+}
