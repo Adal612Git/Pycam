@@ -35,6 +35,22 @@
   let badStart: number | null = null;
   let showWarning = false;
 
+  // --- Voice feedback state ---
+  let compassionate = false;
+  let silentMode = false;
+  let goodStart: number | null = null;
+  let congratulated = false;
+  let lastSpeak = 0;
+
+  function speak(text: string) {
+    if (silentMode) return;
+    const now = Date.now();
+    if (now - lastSpeak < 5000) return;
+    lastSpeak = now;
+    const utter = new SpeechSynthesisUtterance(text);
+    speechSynthesis.speak(utter);
+  }
+
   onMount(async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ video: true });
     videoElement.srcObject = stream;
@@ -110,7 +126,10 @@
         bpm = data.bpm;
         hrvValue = data.hrv;
         if (hrvValue && hrvValue < 25) {
-          alert('¡Alerta de estrés fisiológico!');
+          const msg = compassionate
+            ? 'Recuerda respirar y relajarte, lo estás haciendo muy bien.'
+            : 'Atención, tu HRV está bajo.';
+          speak(msg);
         }
       }
       const diff1 = Math.abs(neckAngle - baselineNeck);
@@ -121,10 +140,29 @@
         posture = '⚠️ Incorrecta';
         if (badStart === null) badStart = Date.now();
         showWarning = Date.now() - (badStart ?? 0) >= 3000;
+        if (showWarning) {
+          const msg = compassionate
+            ? 'Recuerda mantener la espalda recta, lo estás haciendo muy bien.'
+            : 'Atención, tu postura se ha desviado.';
+          speak(msg);
+        }
       } else {
         posture = 'Correcta';
         badStart = null;
         showWarning = false;
+      }
+
+      if (!incorrect && (!hrvValue || hrvValue >= 25)) {
+        if (goodStart === null) {
+          goodStart = Date.now();
+          congratulated = false;
+        } else if (!congratulated && Date.now() - goodStart >= 600000) {
+          speak('¡Excelente trabajo! Has mantenido una postura perfecta por 10 minutos.');
+          congratulated = true;
+        }
+      } else {
+        goodStart = null;
+        congratulated = false;
       }
 
       drawCanvas(incorrect);
@@ -144,6 +182,10 @@
 <div class="container">
   <header>
     <h1>PosturaZen Web v2.0</h1>
+    <div class="toggles">
+      <label><input type="checkbox" bind:checked={compassionate}> Modo compasivo</label>
+      <label><input type="checkbox" bind:checked={silentMode}> No molestar</label>
+    </div>
   </header>
   <div class="main">
     <div class="video-box">
@@ -248,6 +290,16 @@
 
   .alert {
     color: #ff5555;
+  }
+
+  .toggles {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.5rem;
+  }
+
+  .toggles label {
+    font-size: 0.9rem;
   }
 
   @keyframes blink {
