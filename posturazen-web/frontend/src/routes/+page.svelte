@@ -44,43 +44,45 @@
   onMount(() => {
     const timer = setInterval(() => {
       countdown--;
+      message = `Calibrando… espera ${Math.max(countdown, 0)}s`;
+
       if (countdown <= 0) {
+        clearInterval(timer);
         if (!errorMessage) {
           calibrating = false;
           message = 'Monitoreando tu postura';
           baselineNeck = totalNeck / (totalCount || 1);
           baselineHip = totalHip / (totalCount || 1);
         }
-        clearInterval(timer);
-      } else if (!errorMessage) {
-        message = `Calibrando… espera ${countdown}s`;
       }
     }, 1000);
 
-    (async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        videoElement.srcObject = stream;
-        await videoElement.play();
-
-        const posePkg = await import('https://cdn.jsdelivr.net/npm/@mediapipe/pose');
-        const { Pose } = posePkg;
-
-        pose = new Pose({ locateFile: (f: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}` });
-        pose.setOptions({ modelComplexity: 1, smoothLandmarks: true });
-        pose.onResults(handleResults);
-
-        hrvEstimator = new HRVEstimator(30);
-
-        canvasCtx = canvasElement.getContext('2d') as CanvasRenderingContext2D;
-
-        startProcessing();
-      } catch (err) {
-        console.error(err);
-        errorMessage = 'Error al acceder a la cámara o cargar la librería';
-      }
-    })();
+    initPose();
   });
+
+  async function initPose() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      videoElement.srcObject = stream;
+      await videoElement.play();
+
+      const posePkg = await import('https://cdn.jsdelivr.net/npm/@mediapipe/pose');
+      const { Pose } = posePkg;
+
+      pose = new Pose({ locateFile: (f: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}` });
+      pose.setOptions({ modelComplexity: 1, smoothLandmarks: true });
+      pose.onResults(handleResults);
+
+      hrvEstimator = new HRVEstimator(30);
+
+      canvasCtx = canvasElement.getContext('2d') as CanvasRenderingContext2D;
+
+      startProcessing();
+    } catch (err) {
+      console.error(err);
+      errorMessage = 'Error al acceder a la cámara o cargar la librería';
+    }
+  }
 
   function startProcessing() {
     const loop = async () => {
