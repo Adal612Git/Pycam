@@ -16,6 +16,7 @@
   let countdown = 10;
   let message = 'Calibrando… espera 10s';
   let calibrating = true;
+  let errorMessage: string | null = null;
 
   let baselineNeck = 0;
   let baselineHip = 0;
@@ -40,36 +41,45 @@
   let movementAlertActive = false;
   let warningVoiceActive = false;
 
-  onMount(async () => {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-    videoElement.srcObject = stream;
-    await videoElement.play();
-
-    const posePkg = await import('https://cdn.jsdelivr.net/npm/@mediapipe/pose');
-    const { Pose } = posePkg;
-
-    pose = new Pose({ locateFile: (f: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}` });
-    pose.setOptions({ modelComplexity: 1, smoothLandmarks: true });
-    pose.onResults(handleResults);
-
-    hrvEstimator = new HRVEstimator(30);
-
-    canvasCtx = canvasElement.getContext('2d') as CanvasRenderingContext2D;
-
-    startProcessing();
-
+  onMount(() => {
     const timer = setInterval(() => {
       countdown--;
       if (countdown <= 0) {
-        calibrating = false;
-        message = 'Monitoreando tu postura';
-        baselineNeck = totalNeck / (totalCount || 1);
-        baselineHip = totalHip / (totalCount || 1);
+        if (!errorMessage) {
+          calibrating = false;
+          message = 'Monitoreando tu postura';
+          baselineNeck = totalNeck / (totalCount || 1);
+          baselineHip = totalHip / (totalCount || 1);
+        }
         clearInterval(timer);
-      } else {
+      } else if (!errorMessage) {
         message = `Calibrando… espera ${countdown}s`;
       }
     }, 1000);
+
+    (async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        videoElement.srcObject = stream;
+        await videoElement.play();
+
+        const posePkg = await import('https://cdn.jsdelivr.net/npm/@mediapipe/pose');
+        const { Pose } = posePkg;
+
+        pose = new Pose({ locateFile: (f: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}` });
+        pose.setOptions({ modelComplexity: 1, smoothLandmarks: true });
+        pose.onResults(handleResults);
+
+        hrvEstimator = new HRVEstimator(30);
+
+        canvasCtx = canvasElement.getContext('2d') as CanvasRenderingContext2D;
+
+        startProcessing();
+      } catch (err) {
+        console.error(err);
+        errorMessage = 'Error al acceder a la cámara o cargar la librería';
+      }
+    })();
   });
 
   function startProcessing() {
@@ -181,6 +191,9 @@
     </div>
     <aside class="panel {showWarning ? 'warning' : ''}">
       <p>{message}</p>
+      {#if errorMessage}
+        <p class="alert">{errorMessage}</p>
+      {/if}
       {#if !calibrating}
         <p>Frames procesados: {frames}</p>
         <p>Ángulo cuello-espalda: {neckAngle}°</p>
