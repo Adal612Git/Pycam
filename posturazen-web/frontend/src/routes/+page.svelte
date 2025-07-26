@@ -139,13 +139,9 @@
       if (incorrect) {
         posture = '⚠️ Incorrecta';
         if (badStart === null) badStart = Date.now();
-        showWarning = Date.now() - (badStart ?? 0) >= 3000;
-        if (showWarning) {
-          const msg = compassionate
-            ? 'Recuerda mantener la espalda recta, lo estás haciendo muy bien.'
-            : 'Atención, tu postura se ha desviado.';
-          speak(msg);
-        }
+        showWarning = true;
+        const msg = 'Estás perdiendo la postura';
+        speak(msg);
       } else {
         posture = 'Correcta';
         badStart = null;
