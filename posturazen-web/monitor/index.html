@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Monitor Postural</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <h1>Monitor Postural</h1>
+      <div id="postureStatus" class="status good">✅ Buena postura</div>
+      <div class="metrics">
+        <div class="metric">
+          HRV (RMSSD): <span id="hrvValue">--</span> ms
+          <canvas id="hrvChart"></canvas>
+        </div>
+        <div class="metric">
+          BPM: <span id="bpmValue">--</span>
+        </div>
+        <div class="metric">
+          Alertas posturales: <span id="alertCount">0</span>
+        </div>
+        <div class="metric">
+          Tiempo buena postura: <span id="timer">10:00</span>
+        </div>
+      </div>
+      <div id="message"></div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
