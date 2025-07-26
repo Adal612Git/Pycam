@@ -6,6 +6,7 @@
   import { onMount } from 'svelte';
   import { neckBackAngle, shoulderHipAngle } from '$lib/pose/angles';
   import { HRVEstimator } from '$lib/pose/hrv';
+  import Chart from 'chart.js/auto';
 
   let pose: any;
   let videoElement: HTMLVideoElement;
@@ -35,6 +36,15 @@
   let badStart: number | null = null;
   let showWarning = false;
 
+  let alertCount = 0;
+  let postureState: 'good' | 'warn' | 'bad' = 'good';
+  let prevIncorrect = false;
+  let timer = 0;
+  let celebration = false;
+  let chartCanvas: HTMLCanvasElement;
+  let hrvChart: Chart;
+  const hrvData: number[] = [];
+
   // --- Voice feedback state ---
   let compassionate = false;
   let silentMode = false;
@@ -49,6 +59,12 @@
     lastSpeak = now;
     const utter = new SpeechSynthesisUtterance(text);
     speechSynthesis.speak(utter);
+  }
+
+  function formatTime(t: number) {
+    const m = String(Math.floor(t / 60)).padStart(2, '0');
+    const s = String(t % 60).padStart(2, '0');
+    return `${m}:${s}`;
   }
 
   onMount(async () => {
@@ -69,16 +85,37 @@
 
     startProcessing();
 
-    const timer = setInterval(() => {
+    hrvChart = new Chart(chartCanvas.getContext('2d') as CanvasRenderingContext2D, {
+      type: 'line',
+      data: { labels: [], datasets: [{ data: hrvData, borderColor: '#4caf50', tension: 0.3 }] },
+      options: { animation: false, scales: { x: { display: false }, y: { beginAtZero: true } } }
+    });
+
+    const countdownTimer = setInterval(() => {
       countdown--;
       if (countdown <= 0) {
         calibrating = false;
         message = 'Monitoreando tu postura';
         baselineNeck = totalNeck / (totalCount || 1);
         baselineHip = totalHip / (totalCount || 1);
-        clearInterval(timer);
+        clearInterval(countdownTimer);
       } else {
         message = `Calibrando… espera ${countdown}s`;
+      }
+    }, 1000);
+
+    setInterval(() => {
+      if (!calibrating) {
+        if (postureState === 'good') {
+          timer++;
+          if (timer >= 600 && !celebration) {
+            celebration = true;
+            speak('¡Excelente trabajo! Has mantenido una buena postura por 10 minutos.');
+          }
+        } else {
+          timer = 0;
+          celebration = false;
+        }
       }
     }, 1000);
   });
@@ -125,6 +162,11 @@
         const data = hrvEstimator.compute();
         bpm = data.bpm;
         hrvValue = data.hrv;
+        if (hrvValue) {
+          hrvData.push(hrvValue);
+          if (hrvData.length > 50) hrvData.shift();
+          hrvChart.update();
+        }
         if (hrvValue && hrvValue < 25) {
           const msg = compassionate
             ? 'Recuerda respirar y relajarte, lo estás haciendo muy bien.'
@@ -134,20 +176,18 @@
       }
       const diff1 = Math.abs(neckAngle - baselineNeck);
       const diff2 = Math.abs(hipAngle - baselineHip);
-      const incorrect = diff1 > 10 || diff2 > 10;
+      postureState = diff1 > 15 || diff2 > 15 ? 'bad' : diff1 > 10 || diff2 > 10 ? 'warn' : 'good';
+      const incorrect = postureState !== 'good';
 
-      if (incorrect) {
-        posture = '⚠️ Incorrecta';
-        if (badStart === null) badStart = Date.now();
-        showWarning = true;
-        const msg = 'Estás perdiendo la postura';
-        speak(msg);
-      } else {
-        posture = 'Correcta';
-        badStart = null;
-        showWarning = false;
+      posture = postureState === 'good' ? 'Correcta' : postureState === 'warn' ? 'Dudosa' : 'Incorrecta';
+
+      if (incorrect && !prevIncorrect) {
+        alertCount++;
       }
+      prevIncorrect = incorrect;
 
+      showWarning = postureState === 'bad';
+      
       if (!incorrect && (!hrvValue || hrvValue >= 25)) {
         if (goodStart === null) {
           goodStart = Date.now();
@@ -188,16 +228,18 @@
       <video bind:this={videoElement} autoplay playsinline></video>
       <canvas bind:this={canvasElement} width="640" height="480"></canvas>
     </div>
-    <aside class="panel {showWarning ? 'warning' : ''}">
+    <aside class="panel {postureState} {showWarning ? 'warning' : ''}">
       <p>{message}</p>
       {#if !calibrating}
-        <p>Frames procesados: {frames}</p>
-        <p>Ángulo cuello-espalda: {neckAngle}°</p>
-        <p>Ángulo hombros-cadera: {hipAngle}°</p>
-        <p>Visibilidad promedio: {visibility}%</p>
-        <p>Estado: {posture}</p>
-        <p>Frecuencia cardiaca (BPM): {bpm ? bpm.toFixed(1) : 'N/A'}</p>
-        <p>HRV estimado: {hrvValue ? hrvValue.toFixed(1) + ' ms' : 'N/A'}</p>
+        <div class="status {postureState}">Estado: {posture}</div>
+        <canvas bind:this={chartCanvas} id="hrvGraph" width="280" height="100"></canvas>
+        <p>HRV: {hrvValue ? hrvValue.toFixed(1) + ' ms' : 'N/A'}</p>
+        <p>BPM: {bpm ? bpm.toFixed(1) : 'N/A'}</p>
+        <p>Alertas posturales: {alertCount}</p>
+        <p>Tiempo buena postura: {formatTime(timer)}</p>
+        {#if celebration}
+          <p class="celebrate">🎉 ¡Excelente! 10 min de buena postura</p>
+        {/if}
         {#if showWarning}
           <p class="alert">⚠️ Ajusta tu postura para evitar fatiga</p>
         {/if}
@@ -268,6 +310,31 @@
     padding: 1rem;
     background: #2c2c2c;
     border-radius: 8px;
+  }
+
+  .panel.good { background: #2c2c2c; }
+  .panel.warn { background: #3e3a18; }
+  .panel.bad { background: #552222; }
+
+  .status {
+    padding: 0.3rem;
+    border-radius: 4px;
+    text-align: center;
+    font-weight: bold;
+  }
+  .status.good { background: #4caf50; }
+  .status.warn { background: #ffeb3b; color: #000; }
+  .status.bad { background: #f44336; }
+
+  #hrvGraph {
+    width: 100%;
+    height: 100px;
+  }
+
+  .celebrate {
+    color: #4caf50;
+    text-align: center;
+    font-weight: bold;
   }
 
   .info-box {
