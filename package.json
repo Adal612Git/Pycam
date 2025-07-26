@@ -2,6 +2,8 @@
   "name": "posturazen-root",
   "private": true,
   "scripts": {
-    "dev": "npm run dev --prefix posturazen-web/frontend"
+    "dev": "npm run dev --prefix posturazen-web/frontend",
+    "dev-hrv": "npm run dev --prefix hrv-react",
+    "build-hrv": "npm run build --prefix hrv-react"
   }
 }
